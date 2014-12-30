@@ -19,26 +19,33 @@ int main(int argc, char* argv[]) {
 		perror("fork");
 		return 1;
 	} else if (child == 0) {
-		int transact_fd = open("transact", O_RDONLY);
+		int transact_fd = open("transact", O_RDWR);
 		if (transact_fd == -1) {
 			perror("child: open transact");
 			return 1;
 		}
 
-		unsigned long long dead;
-		int i = 0, j, sum;
+		unsigned long long message;
+		int i = 0, j, res;
+
+		// Synchronize.
+		message = 0;
+		if (write(transact_fd, &message, sizeof(message)) <= 0) {
+			perror("child transactfd init");
+			return 1;
+		}
 
 		while (1) {
 			*x = childsum(x + 1, COUNT);
-			read(transact_fd, &dead, sizeof(dead));
-			if (__builtin_expect(dead, 0)) {
+			res = read(transact_fd, &message, sizeof(message));
+			if (__builtin_expect(res != sizeof(message), 0)) {
 				break;
 			}
 		}
 	} else {
-		unsigned long long dead;
+		unsigned long long message;
 		const int expected = COUNT * (COUNT - 1) / 2 + 1;
-		int i;
+		int i, res;
 		parentfill(x + 1, COUNT);
 
 		int transact_fd = open("transact", O_RDWR);
@@ -47,15 +54,18 @@ int main(int argc, char* argv[]) {
 			return 1;
 		}
 
+		// Synchronize.
+		message = 1;
+		if (write(transact_fd, &message, sizeof(message)) <= 0) {
+			perror("parent transactfd init");
+			return 1;
+		}
+
 		struct timespec t0, t1;
 		clock_gettime(CLOCK_REALTIME, &t0);
 		for (i = 0; i < ITERATIONS; i++) {
 			*x = 0;
-			read(transact_fd, &dead, sizeof(dead));
-			if (__builtin_expect(dead, 0)) {
-				fprintf(stderr, "child died\n");
-				break;
-			}
+			res = read(transact_fd, &message, sizeof(message));
 			if (__builtin_expect(*x != expected, 0)) {
 				fprintf(stderr, "%s: %d/%d: %d != %d\n", argv[0], i, ITERATIONS, *x, expected);
 				ret = 1;
