@@ -1,20 +1,31 @@
 #!/usr/bin/python
 
+import argparse
 import subprocess
 
+parser = argparse.ArgumentParser(description='Run the ipc performance test suite')
+parser.add_argument('--runs', type=int, default=100,
+        help='Number of times to run each test program')
+parser.add_argument('--iterations', type=int, default=10000,
+        help='Number of iterations per test run')
+args = parser.parse_args()
+
 counts = [2**i for i in xrange(15)]
-programs = ['pipetest', 'transacttest', 'shmpipetest', 'shmtest']
-runs = 100
-iterations = 100000
-total = runs * len(counts) * len(programs)
+programs = {
+	'pipetest': 'pipes',
+	'transacttest': 'shm+transact',
+	'shmpipetest': 'shm+pipes',
+	'shmtest': 'shm+semaphore'
+}
+total = args.runs * len(counts) * len(programs)
 done = 0
 
 with open('data.csv', 'a') as f:
 	for p in programs:
 		for c in counts:
-			for j in xrange(runs):
+			for j in xrange(args.runs):
 				try:
-					line = '%s %d %s' % (p, c, subprocess.check_output(['./%s' % p, '--iterations', str(iterations), '--count', str(c)]).strip())
+					line = '%s %d %s' % (programs[p], c, subprocess.check_output(['./%s' % p, '--iterations', str(args.iterations), '--count', str(c)]).strip())
 				except subprocess.CalledProcessError as e:
 					line = '%s %d error' % (p, c)
 				done += 1

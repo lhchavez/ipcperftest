@@ -25,6 +25,6 @@ with open(sys.argv[1], 'r') as f:
 names = sorted(names.keys())
 counts = sorted(counts.keys())
 
-print ',' + ','.join(names)
+print '\t' + ''.join(['%8s' % x[0:7] for x in names])
 for c in counts:
-    print '%d,%s' % (c, ','.join([str(analyze(data[(name, c)])[0]) for name in names]))
+    print '%d\t%s' % (c, ''.join(['%8.2f' % analyze(data[(name, c)])[0] for name in names]))

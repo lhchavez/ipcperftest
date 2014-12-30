@@ -2,7 +2,7 @@
 all: pipetest shmtest shmpipetest transacttest
 
 pipetest: pipetest.c | ipcperf.h Makefile
-	gcc -O2 -g -o $@ $^ -Wno-unused-result
+	gcc -O2 -o $@ $^ -Wno-unused-result
 
 shmtest: shmtest.c | ipcperf.h Makefile
 	gcc -O2 -o $@ $^ -lrt -lpthread -Wno-unused-result
@@ -19,3 +19,7 @@ transact:
 .PHONY: clean
 clean:
 	rm pipetest shmtest transacttest
+
+.PHONY: test
+test: | pipetest shmtest shmpipetest transacttest
+	rm data.csv 2> /dev/null; python harness.py --iterations 1000 && python extract.py data.csv
