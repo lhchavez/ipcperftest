@@ -18,7 +18,7 @@ transact:
 
 .PHONY: clean
 clean:
-	rm pipetest shmtest transacttest
+	rm pipetest shmtest shmpipetest transacttest
 
 .PHONY: test
 test: | pipetest shmtest shmpipetest transacttest

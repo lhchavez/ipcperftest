@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
+#include <sys/resource.h>
 
 #include "ipcperf.h"
 
@@ -35,8 +36,6 @@ int main(int argc, char* argv[]) {
 		}
 	} else {
 		int i, msg = 0;
-		const int expected = COUNT * (COUNT - 1) / 2 + 1;
-		parentfill(x + 1, COUNT);
 
 		// Synchronize.
 		read(in[0], &msg, sizeof(msg));
@@ -45,6 +44,8 @@ int main(int argc, char* argv[]) {
 		clock_gettime(CLOCK_REALTIME, &t0);
 		for (i = 0; i < ITERATIONS; i++) {
 			*x = 0;
+			parentfill(x + 1, COUNT, i);
+			const int expected = COUNT * (COUNT - 1) / 2 + 1 + i * COUNT;
 			write(out[1], &msg, sizeof(msg));
 			read(in[0], &msg, sizeof(msg));
 			if (__builtin_expect(*x != expected, 0)) {
@@ -54,8 +55,17 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		clock_gettime(CLOCK_REALTIME, &t1);
+		close(out[1]);
+		close(in[0]);
 
-		printf("%.4f\n", ((t1.tv_sec * 1000000000LL + t1.tv_nsec) - (t0.tv_sec * 1000000000LL + t0.tv_nsec)) / (1000.0 * ITERATIONS));
+		int status;
+		struct rusage usage;
+		wait3(&status, 0, &usage);
+		printf("%.4f %.4f %.4f\n",
+				(usage.ru_utime.tv_sec * 1000000LL + usage.ru_utime.tv_usec) / (1.0 * ITERATIONS),
+				(usage.ru_stime.tv_sec * 1000000LL + usage.ru_stime.tv_usec) / (1.0 * ITERATIONS),
+				((t1.tv_sec * 1000000000LL + t1.tv_nsec) - (t0.tv_sec * 1000000000LL + t0.tv_nsec)) / (1000.0 * ITERATIONS)
+		);
 	}
 	return ret;
 }

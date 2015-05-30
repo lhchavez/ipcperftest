@@ -8,6 +8,8 @@ parser.add_argument('--runs', type=int, default=100,
         help='Number of times to run each test program')
 parser.add_argument('--iterations', type=int, default=10000,
         help='Number of iterations per test run')
+parser.add_argument('output', type=str, default='data.csv',
+        help='File to output reaults to')
 args = parser.parse_args()
 
 counts = [2**i for i in xrange(15)]
@@ -20,7 +22,7 @@ programs = {
 total = args.runs * len(counts) * len(programs)
 done = 0
 
-with open('data.csv', 'a') as f:
+with open(args.output, 'a') as f:
 	for p in programs:
 		for c in counts:
 			for j in xrange(args.runs):

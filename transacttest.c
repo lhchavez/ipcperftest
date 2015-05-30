@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
+#include <sys/resource.h>
 
 #include "ipcperf.h"
 
@@ -46,7 +47,6 @@ int main(int argc, char* argv[]) {
 		unsigned long long message;
 		const int expected = COUNT * (COUNT - 1) / 2 + 1;
 		int i, res;
-		parentfill(x + 1, COUNT);
 
 		int transact_fd = open("transact", O_RDWR);
 		if (transact_fd == -1) {
@@ -65,6 +65,8 @@ int main(int argc, char* argv[]) {
 		clock_gettime(CLOCK_REALTIME, &t0);
 		for (i = 0; i < ITERATIONS; i++) {
 			*x = 0;
+			parentfill(x + 1, COUNT, i);
+			const int expected = COUNT * (COUNT - 1) / 2 + 1 + i * COUNT;
 			res = read(transact_fd, &message, sizeof(message));
 			if (__builtin_expect(*x != expected, 0)) {
 				fprintf(stderr, "%s: %d/%d: %d != %d\n", argv[0], i, ITERATIONS, *x, expected);
@@ -74,11 +76,15 @@ int main(int argc, char* argv[]) {
 		}
 		clock_gettime(CLOCK_REALTIME, &t1);
 
-		printf("%.4f\n", ((t1.tv_sec * 1000000000LL + t1.tv_nsec) - (t0.tv_sec * 1000000000LL + t0.tv_nsec)) / (1000.0 * ITERATIONS));
-
 		close(transact_fd);
 		int status;
-		wait(&status);
+		struct rusage usage;
+		wait3(&status, 0, &usage);
+		printf("%.4f %.4f %.4f\n",
+				(usage.ru_utime.tv_sec * 1000000LL + usage.ru_utime.tv_usec) / (1.0 * ITERATIONS),
+				(usage.ru_stime.tv_sec * 1000000LL + usage.ru_stime.tv_usec) / (1.0 * ITERATIONS),
+				((t1.tv_sec * 1000000000LL + t1.tv_nsec) - (t0.tv_sec * 1000000000LL + t0.tv_nsec)) / (1000.0 * ITERATIONS)
+		);
 	}
 	return ret;
 }

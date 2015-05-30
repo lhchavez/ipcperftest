@@ -75,9 +75,9 @@ inline int childsum(int* arr, int count) {
 	return sum;
 }
 
-inline void parentfill(int* arr, int count) {
+__attribute__((noinline)) void parentfill(int* arr, int count, int start) {
 	int i;
 	for (i = 0; i < count; i++) {
-		*(arr++) = i;
+		*(arr++) = i + start;
 	}
 }
